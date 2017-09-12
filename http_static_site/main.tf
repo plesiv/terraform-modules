@@ -1,9 +1,19 @@
-variable main_dns_name          { }
-variable alt_dns_names          {
-                                  type = "list"
-                                  default = []
-                                }
-variable route53_zone_id        { }
+variable "main_dns_name"    {
+                              type = "string"
+                            }
+variable "alt_dns_names"    {
+                              type = "list"
+                              default = []
+                            }
+variable "route53_zone_id"  {
+                              type = "string"
+                            }
+variable "root_object"      {
+                              default = "index.html"
+                            }
+variable "error_object"     {
+                              default = "404.html"
+                            }
 
 output "main_bucket"        {
                               value = {
@@ -19,8 +29,8 @@ output "redirect_buckets"   {
                             }
 
 #--- S3 ----------------------------------------------------------------------
-data "template_file" "s3_annonymous_read_policy" {
-  template = "${file("${path.module}/templates/s3_annonymous_read_policy.json")}"
+data "template_file" "s3_policy_annonymous_get_object" {
+  template = "${file("${path.module}/templates/s3_policy_annonymous_get_object.json")}"
 
   vars {
     bucket_name    = "${var.main_dns_name}"
@@ -29,10 +39,10 @@ data "template_file" "s3_annonymous_read_policy" {
 
 resource "aws_s3_bucket" "main_bucket" {
   bucket = "${var.main_dns_name}"
-  policy = "${data.template_file.s3_annonymous_read_policy.rendered}"
+  policy = "${data.template_file.s3_policy_annonymous_get_object.rendered}"
   website {
-    index_document = "index.html"
-    error_document = "404.html"
+    index_document = "${var.root_object}"
+    error_document = "${var.error_object}"
   }
 }
 

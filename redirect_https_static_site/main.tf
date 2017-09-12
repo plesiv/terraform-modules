@@ -3,6 +3,7 @@ variable "main_dns_name"          {
                                   }
 variable "alt_dns_names"          {
                                     type = "list"
+                                    default = []
                                   }
 variable "route53_zone_id"        {
                                     type = "string"
@@ -36,11 +37,20 @@ output "redirect_buckets"   {
                             }
 
 #--- S3 ----------------------------------------------------------------------
+data "template_file" "s3_policy_annonymous_get_object" {
+  template = "${file("${path.module}/templates/s3_policy_annonymous_get_object.json")}"
+
+  vars {
+    bucket_name    = "${var.main_dns_name}"
+  }
+}
+
 resource "aws_s3_bucket" "main_bucket" {
   bucket = "${var.main_dns_name}"
+  policy = "${data.template_file.s3_policy_annonymous_get_object.rendered}"
   website {
     index_document = "${var.root_object}"
-    error_document = "404.html"
+    error_document = "${var.error_object}"
   }
 }
 
