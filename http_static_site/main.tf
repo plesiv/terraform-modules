@@ -1,5 +1,5 @@
 variable main_dns_name          { }
-variable redirect_dns_names     {
+variable alt_dns_names          {
                                   type = "list"
                                   default = []
                                 }
@@ -28,9 +28,9 @@ resource "aws_s3_bucket" "main_bucket" {
 }
 
 resource "aws_s3_bucket" "redirect_buckets" {
-  count = "${length(var.redirect_dns_names)}"
+  count = "${length(var.alt_dns_names)}"
 
-  bucket = "${var.redirect_dns_names[count.index]}"
+  bucket = "${var.alt_dns_names[count.index]}"
   website {
     redirect_all_requests_to = "http://${var.main_dns_name}"
   }
@@ -50,9 +50,9 @@ resource "aws_route53_record" "main_dns_entry" {
 }
 
 resource "aws_route53_record" "redirect_dns_entries" {
-  count = "${length(var.redirect_dns_names)}"
+  count = "${length(var.alt_dns_names)}"
 
-  name    = "${var.redirect_dns_names[count.index]}"
+  name    = "${var.alt_dns_names[count.index]}"
   type    = "A"
   zone_id = "${var.route53_zone_id}"
 
