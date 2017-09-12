@@ -19,8 +19,17 @@ output "redirect_buckets"   {
                             }
 
 #--- S3 ----------------------------------------------------------------------
+data "template_file" "s3_annonymous_read_policy" {
+  template = "${file("${path.module}/templates/s3_annonymous_read_policy.json")}"
+
+  vars {
+    bucket_name    = "${var.main_dns_name}"
+  }
+}
+
 resource "aws_s3_bucket" "main_bucket" {
   bucket = "${var.main_dns_name}"
+  policy = "${data.template_file.s3_annonymous_read_policy.rendered}"
   website {
     index_document = "index.html"
     error_document = "404.html"
