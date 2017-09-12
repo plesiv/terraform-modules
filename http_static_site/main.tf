@@ -1,11 +1,9 @@
 variable main_dns_name          { }
 variable redirect_dns_names     {
                                   type = "list"
+                                  default = []
                                 }
 variable route53_zone_id        { }
-variable redirect_protocol      {
-                                  default = "http"
-                                }
 
 output "main_bucket"        {
                               value = {
@@ -34,7 +32,7 @@ resource "aws_s3_bucket" "redirect_buckets" {
 
   bucket = "${var.redirect_dns_names[count.index]}"
   website {
-    redirect_all_requests_to = "${var.redirect_protocol}://${var.main_dns_name}"
+    redirect_all_requests_to = "http://${var.main_dns_name}"
   }
 }
 
