@@ -1,53 +1,61 @@
-variable "main_dns_name"          {
-                                    type = "string"
-                                  }
-variable "alt_dns_names"          {
-                                    type = "list"
-                                    default = []
-                                  }
-variable "route53_zone_id"        {
-                                    type = "string"
-                                  }
-variable "acm_certificate_arn"    {
-                                    description = "ARN of the certificate for TLS cert in us-east-1 region"
-                                    type = "string"
-                                  }
-variable "root_object"            {
-                                    default = "index.html"
-                                  }
-variable "error_object"           {
-                                    default = "404.html"
-                                  }
-variable "cloudfront_price_class" {
-                                    description = "One of PriceClass_All, PriceClass_200, PriceClass_100."
-                                    default = "PriceClass_All"
-                                  }
+variable "main_dns_name" {
+  type = "string"
+}
 
-output "main_bucket"        {
-                              value = {
-                                website_endpoint = "${aws_s3_bucket.main_bucket.website_endpoint}",
-                                arn              = "${aws_s3_bucket.main_bucket.arn}",
-                              }
-                            }
-output "redirect_buckets"   {
-                              value = {
-                                website_endpoints = "${zipmap(aws_s3_bucket.redirect_buckets.*.bucket, aws_s3_bucket.redirect_buckets.*.website_endpoint)}",
-                                arn               = "${zipmap(aws_s3_bucket.redirect_buckets.*.bucket, aws_s3_bucket.redirect_buckets.*.arn)}",
-                              }
-                            }
+variable "alt_dns_names" {
+  type    = "list"
+  default = []
+}
+
+variable "route53_zone_id" {
+  type = "string"
+}
+
+variable "acm_certificate_arn" {
+  description = "ARN of the certificate for TLS cert in us-east-1 region"
+  type        = "string"
+}
+
+variable "root_object" {
+  default = "index.html"
+}
+
+variable "error_object" {
+  default = "404.html"
+}
+
+variable "cloudfront_price_class" {
+  description = "One of PriceClass_All, PriceClass_200, PriceClass_100."
+  default     = "PriceClass_All"
+}
+
+output "main_bucket" {
+  value = {
+    website_endpoint = "${aws_s3_bucket.main_bucket.website_endpoint}"
+    arn              = "${aws_s3_bucket.main_bucket.arn}"
+  }
+}
+
+output "redirect_buckets" {
+  value = {
+    website_endpoints = "${zipmap(aws_s3_bucket.redirect_buckets.*.bucket, aws_s3_bucket.redirect_buckets.*.website_endpoint)}"
+    arn               = "${zipmap(aws_s3_bucket.redirect_buckets.*.bucket, aws_s3_bucket.redirect_buckets.*.arn)}"
+  }
+}
 
 #--- S3 ----------------------------------------------------------------------
 data "template_file" "s3_policy_annonymous_get_object" {
   template = "${file("${path.module}/templates/s3_policy_annonymous_get_object.json")}"
 
   vars {
-    bucket_name    = "${var.main_dns_name}"
+    bucket_name = "${var.main_dns_name}"
   }
 }
 
 resource "aws_s3_bucket" "main_bucket" {
   bucket = "${var.main_dns_name}"
   policy = "${data.template_file.s3_policy_annonymous_get_object.rendered}"
+
   website {
     index_document = "${var.root_object}"
     error_document = "${var.error_object}"
@@ -58,6 +66,7 @@ resource "aws_s3_bucket" "redirect_buckets" {
   count = "${length(var.alt_dns_names)}"
 
   bucket = "${var.alt_dns_names[count.index]}"
+
   website {
     redirect_all_requests_to = "https://${var.main_dns_name}"
   }
@@ -70,8 +79,8 @@ resource "aws_route53_record" "main_dns_entry" {
   zone_id = "${var.route53_zone_id}"
 
   alias {
-    name = "${aws_cloudfront_distribution.cache.domain_name}"
-    zone_id = "${aws_cloudfront_distribution.cache.hosted_zone_id}"
+    name                   = "${aws_cloudfront_distribution.cache.domain_name}"
+    zone_id                = "${aws_cloudfront_distribution.cache.hosted_zone_id}"
     evaluate_target_health = false
   }
 }
@@ -84,8 +93,8 @@ resource "aws_route53_record" "redirect_dns_entries" {
   zone_id = "${var.route53_zone_id}"
 
   alias {
-    name = "${element(aws_s3_bucket.redirect_buckets.*.website_domain, count.index)}"
-    zone_id = "${element(aws_s3_bucket.redirect_buckets.*.hosted_zone_id, count.index)}"
+    name                   = "${element(aws_s3_bucket.redirect_buckets.*.website_domain, count.index)}"
+    zone_id                = "${element(aws_s3_bucket.redirect_buckets.*.hosted_zone_id, count.index)}"
     evaluate_target_health = false
   }
 }
@@ -98,13 +107,13 @@ resource "aws_cloudfront_distribution" "cache" {
     domain_name = "${aws_s3_bucket.main_bucket.bucket_domain_name}"
   }
 
-  enabled = true
+  enabled             = true
   default_root_object = "${var.root_object}"
-  aliases = "${list(var.main_dns_name)}"
+  aliases             = "${list(var.main_dns_name)}"
 
   custom_error_response {
-    error_code = 404
-    response_code = 404
+    error_code         = 404
+    response_code      = 404
     response_page_path = "/${var.error_object}"
   }
 
@@ -117,9 +126,9 @@ resource "aws_cloudfront_distribution" "cache" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = "${var.acm_certificate_arn}"
+    acm_certificate_arn      = "${var.acm_certificate_arn}"
     minimum_protocol_version = "TLSv1"
-    ssl_support_method = "sni-only"
+    ssl_support_method       = "sni-only"
   }
 
   default_cache_behavior {
@@ -129,6 +138,7 @@ resource "aws_cloudfront_distribution" "cache" {
 
     forwarded_values {
       query_string = false
+
       cookies {
         forward = "none"
       }
